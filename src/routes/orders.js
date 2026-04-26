@@ -5,7 +5,7 @@ const { generateOrderNumber } = require('../utils/orderNumber');
 async function orderRoutes(fastify, options) {
   // Public - Create Order (Checkout) - no auth required
   fastify.post('/', async (request, reply) => {
-    const { customerPhone, customerName, address, items, totalAmount, paymentMethod } = request.body;
+    const { customerPhone, customerName, address, items, totalAmount, paymentMethod, deliveryCharge } = request.body;
 
     if (!customerPhone) return reply.code(400).send({ error: 'Phone number is required' });
     if (!address) return reply.code(400).send({ error: 'Delivery address is required' });
@@ -35,6 +35,7 @@ async function orderRoutes(fastify, options) {
           customerName,
           address,
           totalAmount,
+          deliveryCharge: parseFloat(deliveryCharge) || 0,
           paymentMethod: paymentMethod || 'COD',
           items: {
             create: items.map(item => ({

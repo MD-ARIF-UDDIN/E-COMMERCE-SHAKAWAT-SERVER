@@ -102,35 +102,20 @@ model ColorVariant {
   updatedAt DateTime @updatedAt
 }
 
-enum OrderStatus {
-  Pending
-  Processing
-  Packed
-  Shipped
-  Delivered
-  Cancelled
-}
-
-enum PaymentMethod {
-  COD
-  bKash
-  Nagad
-  Others
-}
-
 model Order {
-  id              String        @id @default(uuid())
-  orderNumber     String        @unique
+  id              String      @id @default(uuid())
+  orderNumber     String      @unique
+  customerName    String
   customerPhone   String
-  customerName    String?
   address         String
   totalAmount     Float
-  status          OrderStatus   @default(Pending)
-  paymentMethod   PaymentMethod @default(COD)
+  deliveryCharge  Float       @default(0)
+  paymentMethod   String      @default("COD")
+  status          String      @default("Pending")
   deliveryCompany String?
   items           OrderItem[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
   @@index([customerPhone])
 }
@@ -145,6 +130,18 @@ model OrderItem {
   price     Float
   color     String?
   colorName String?
+}
+
+model Settings {
+  id                String   @id @default("global")
+  businessName      String   @default("NovaCommerce")
+  contactPhone      String?
+  contactEmail      String?
+  logoUrl           String?
+  insideChittagong  Float    @default(60)
+  outsideChittagong Float    @default(120)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 enum LogType {
@@ -175,16 +172,6 @@ model Purchase {
   date      DateTime @default(now())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-model Settings {
-  id           String   @id @default(uuid())
-  businessName String
-  contactPhone String
-  contactEmail String
-  logoUrl      String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
 }
 
 model Spam {
