@@ -115,13 +115,18 @@ const start = async () => {
     server.register(require('./src/routes/reports'), { prefix: '/api/reports' });
 
     server.get('/', async (request, reply) => {
+      let settings = await prisma.settings.findUnique({ where: { id: 'global' } });
+      if (!settings) settings = { businessName: 'NovaCart' };
+      
+      const bName = settings.businessName;
+      
       reply.type('text/html').send(`
         <!DOCTYPE html>
         <html lang="en">
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>NovaCart API | System Online</title>
+          <title>${bName} API | System Online</title>
           <script src="https://cdn.tailwindcss.com"></script>
           <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
           <style>
@@ -137,7 +142,7 @@ const start = async () => {
             <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center text-white mx-auto mb-8 shadow-lg shadow-indigo-200">
               <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
             </div>
-            <h1 className="text-3xl font-black mb-4 tracking-tight">Nova<span className="text-indigo-600">Cart</span> API</h1>
+            <h1 className="text-3xl font-black mb-4 tracking-tight">${bName} API</h1>
             <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-600 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest mb-8">
               <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
               System Operational
