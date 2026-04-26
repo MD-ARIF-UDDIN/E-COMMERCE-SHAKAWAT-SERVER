@@ -110,6 +110,8 @@ const start = async () => {
     server.register(require('./src/routes/inventory'), { prefix: '/api/admin/inventory' });
     server.register(require('./src/routes/spam'), { prefix: '/api/admin/spam' });
     server.register(require('./src/routes/settings'), { prefix: '/api/settings' });
+    server.register(require('./src/routes/users'), { prefix: '/api/users' });
+    server.register(require('./src/routes/upload'), { prefix: '/api/upload' });
     server.register(require('./src/routes/reports'), { prefix: '/api/reports' });
 
     server.get('/', async (request, reply) => {
