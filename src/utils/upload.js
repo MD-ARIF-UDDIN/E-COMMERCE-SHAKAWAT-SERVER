@@ -9,20 +9,24 @@ const { v4: uuidv4 } = require('uuid');
  * @returns {Promise<string>} - Public URL of the uploaded image.
  */
 async function uploadProductImage(buffer, originalName) {
+  return uploadToBucket(buffer, 'products');
+}
+
+async function uploadCategoryImage(buffer, originalName) {
+  return uploadToBucket(buffer, 'categories');
+}
+
+async function uploadToBucket(buffer, bucketName) {
   try {
-    // 1. Process image with sharp
-    // Resize if larger than 1200px and convert to WebP with 80% quality
     const processedBuffer = await sharp(buffer)
       .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 80 })
       .toBuffer();
 
-    // 2. Generate unique filename
     const fileName = `${uuidv4()}.webp`;
 
-    // 3. Upload to Supabase 'products' bucket
     const { data, error } = await supabase.storage
-      .from('products')
+      .from(bucketName)
       .upload(fileName, processedBuffer, {
         contentType: 'image/webp',
         cacheControl: '3600',
@@ -31,16 +35,15 @@ async function uploadProductImage(buffer, originalName) {
 
     if (error) throw error;
 
-    // 4. Get Public URL
     const { data: { publicUrl } } = supabase.storage
-      .from('products')
+      .from(bucketName)
       .getPublicUrl(fileName);
 
     return publicUrl;
   } catch (error) {
-    console.error('Upload error:', error);
-    throw new Error('Failed to upload image: ' + error.message);
+    console.error(`Upload error to ${bucketName}:`, error);
+    throw new Error(`Failed to upload image to ${bucketName}: ` + error.message);
   }
 }
 
-module.exports = { uploadProductImage };
+module.exports = { uploadProductImage, uploadCategoryImage };
