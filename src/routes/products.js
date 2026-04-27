@@ -10,8 +10,22 @@ async function productRoutes(fastify, options) {
     const { category, brand, search, sort, minPrice, maxPrice } = request.query;
 
     let where = {};
-    if (category) where.categoryId = category;
-    if (brand) where.brandId = brand;
+    if (category) {
+      where.category = {
+        OR: [
+          { id: category },
+          { slug: category }
+        ]
+      };
+    }
+    if (brand) {
+      where.brand = {
+        OR: [
+          { id: brand },
+          { slug: brand }
+        ]
+      };
+    }
     if (minPrice || maxPrice) {
       where.price = {};
       if (minPrice) where.price.gte = parseFloat(minPrice);

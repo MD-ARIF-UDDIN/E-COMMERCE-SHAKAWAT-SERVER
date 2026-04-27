@@ -113,6 +113,7 @@ const start = async () => {
     server.register(require('./src/routes/users'), { prefix: '/api/users' });
     server.register(require('./src/routes/upload'), { prefix: '/api/upload' });
     server.register(require('./src/routes/reports'), { prefix: '/api/reports' });
+    server.register(require('./src/routes/banners'), { prefix: '/api/banners' });
 
     server.get('/', async (request, reply) => {
       let settings = await prisma.settings.findUnique({ where: { id: 'global' } });
