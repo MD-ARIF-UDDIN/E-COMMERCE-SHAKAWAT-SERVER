@@ -16,7 +16,7 @@ async function settingsRoutes(fastify, options) {
             id: 'global',
             insideChittagong: 60,
             outsideChittagong: 120,
-            businessName: 'NovaCommerce'
+            businessName: 'Bronze Mart'
           }
         });
       }
@@ -45,7 +45,7 @@ async function settingsRoutes(fastify, options) {
           id: 'global',
           insideChittagong: parseFloat(insideChittagong) || 60,
           outsideChittagong: parseFloat(outsideChittagong) || 120,
-          businessName: businessName || 'NovaCommerce',
+          businessName: businessName || 'Bronze Mart',
           contactPhone,
           contactEmail
         }
