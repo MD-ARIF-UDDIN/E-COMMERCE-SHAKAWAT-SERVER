@@ -50,6 +50,7 @@ async function productRoutes(fastify, options) {
         category: { select: { name: true, slug: true } },
         brand: { select: { name: true, slug: true } },
         colorVariants: true,
+        sizeVariants: true,
       }
     });
     return mapId(products);
@@ -64,6 +65,7 @@ async function productRoutes(fastify, options) {
         brand: { select: { name: true, slug: true } },
         subBrand: { select: { name: true, slug: true } },
         colorVariants: true,
+        sizeVariants: true,
       }
     });
     if (!product) return reply.code(404).send({ error: 'Product not found' });
@@ -78,6 +80,7 @@ async function productRoutes(fastify, options) {
         category: { select: { name: true, slug: true } },
         brand: { select: { name: true, slug: true } },
         colorVariants: true,
+        sizeVariants: true,
       }
     });
     if (!product) return reply.code(404).send({ error: 'Product not found' });
@@ -137,11 +140,11 @@ async function productRoutes(fastify, options) {
               if (fieldname === 'discountPrice') value = null;
               else continue;
             }
-          } else if (['isFeatured', 'isDiscounted', 'hasColors'].includes(fieldname)) {
+          } else if (['isFeatured', 'isDiscounted', 'isMultipleColor', 'isMultipleSize'].includes(fieldname)) {
             value = value === 'true';
           } else if (value === '' && ['brandId', 'subBrandId', 'discountPrice', 'description'].includes(fieldname)) {
             value = null;
-          } else if (fieldname === 'colorVariants') {
+          } else if (fieldname === 'colorVariants' || fieldname === 'sizeVariants') {
              try {
                value = JSON.parse(value);
              } catch (e) {
@@ -152,7 +155,7 @@ async function productRoutes(fastify, options) {
         }
       }
 
-      const validFields = ['name', 'slug', 'categoryId', 'brandId', 'subBrandId', 'price', 'discountPrice', 'stock', 'description', 'isFeatured', 'isDiscounted', 'hasColors'];
+      const validFields = ['name', 'slug', 'categoryId', 'brandId', 'subBrandId', 'price', 'discountPrice', 'stock', 'description', 'isFeatured', 'isDiscounted', 'isMultipleColor', 'isMultipleSize'];
       const sanitizedData = {};
       validFields.forEach(f => {
         if (data[f] !== undefined) sanitizedData[f] = data[f];
@@ -160,7 +163,9 @@ async function productRoutes(fastify, options) {
 
       const createData = { ...sanitizedData, images };
       
-      if (data.hasColors && data.colorVariants && Array.isArray(data.colorVariants)) {
+      let totalStock = sanitizedData.stock || 0;
+
+      if (data.isMultipleColor && data.colorVariants && Array.isArray(data.colorVariants)) {
          createData.colorVariants = {
             create: data.colorVariants.map(cv => ({
                name: cv.name,
@@ -168,11 +173,27 @@ async function productRoutes(fastify, options) {
                stock: parseInt(cv.stock) || 0
             }))
          };
+         totalStock = data.colorVariants.reduce((sum, cv) => sum + (parseInt(cv.stock) || 0), 0);
       }
+
+      if (data.isMultipleSize && data.sizeVariants && Array.isArray(data.sizeVariants)) {
+         createData.sizeVariants = {
+            create: data.sizeVariants.map(sv => ({
+               name: sv.name,
+               stock: parseInt(sv.stock) || 0
+            }))
+         };
+         // If both are enabled, we prioritize sizes for total stock or just sum whichever is active
+         if (data.isMultipleSize) {
+           totalStock = data.sizeVariants.reduce((sum, sv) => sum + (parseInt(sv.stock) || 0), 0);
+         }
+      }
+
+      createData.stock = totalStock;
 
       const product = await prisma.product.create({
         data: createData,
-        include: { colorVariants: true }
+        include: { colorVariants: true, sizeVariants: true }
       });
       
       return reply.code(201).send(mapId(product));
@@ -212,11 +233,11 @@ async function productRoutes(fastify, options) {
                 if (fieldname === 'discountPrice') value = null;
                 else continue;
               }
-            } else if (['isFeatured', 'isDiscounted', 'hasColors'].includes(fieldname)) {
+            } else if (['isFeatured', 'isDiscounted', 'isMultipleColor', 'isMultipleSize'].includes(fieldname)) {
               value = value === 'true';
             } else if (value === '' && ['brandId', 'subBrandId', 'discountPrice', 'description'].includes(fieldname)) {
               value = null;
-            } else if (fieldname === 'colorVariants') {
+            } else if (fieldname === 'colorVariants' || fieldname === 'sizeVariants') {
                try {
                  value = JSON.parse(value);
                } catch (e) {
@@ -228,25 +249,26 @@ async function productRoutes(fastify, options) {
         }
       }
 
-      const validFields = ['name', 'slug', 'categoryId', 'brandId', 'subBrandId', 'price', 'discountPrice', 'stock', 'description', 'isFeatured', 'isDiscounted', 'hasColors'];
+      const validFields = ['name', 'slug', 'categoryId', 'brandId', 'subBrandId', 'price', 'discountPrice', 'stock', 'description', 'isFeatured', 'isDiscounted', 'isMultipleColor', 'isMultipleSize'];
       const sanitizedData = {};
       validFields.forEach(f => {
         if (data[f] !== undefined) sanitizedData[f] = data[f];
       });
 
-      // Update product basics and recreate color variants if needed
+      // Update product basics and recreate variants if needed
       await prisma.$transaction(async (tx) => {
-         if (data.hasColors) {
-           await tx.colorVariant.deleteMany({ where: { productId: request.params.id } });
-         }
+         await tx.colorVariant.deleteMany({ where: { productId: request.params.id } });
+         await tx.sizeVariant.deleteMany({ where: { productId: request.params.id } });
       });
+
+      let totalStock = sanitizedData.stock || 0;
 
       const updateData = {
           ...sanitizedData,
           images: [...existingImages, ...newImages]
       };
       
-      if (data.hasColors && data.colorVariants && Array.isArray(data.colorVariants)) {
+      if (data.isMultipleColor && data.colorVariants && Array.isArray(data.colorVariants)) {
          updateData.colorVariants = {
             create: data.colorVariants.map(cv => ({
                name: cv.name,
@@ -254,12 +276,27 @@ async function productRoutes(fastify, options) {
                stock: parseInt(cv.stock) || 0
             }))
          };
+         totalStock = data.colorVariants.reduce((sum, cv) => sum + (parseInt(cv.stock) || 0), 0);
       }
+
+      if (data.isMultipleSize && data.sizeVariants && Array.isArray(data.sizeVariants)) {
+         updateData.sizeVariants = {
+            create: data.sizeVariants.map(sv => ({
+               name: sv.name,
+               stock: parseInt(sv.stock) || 0
+            }))
+         };
+         if (data.isMultipleSize) {
+           totalStock = data.sizeVariants.reduce((sum, sv) => sum + (parseInt(sv.stock) || 0), 0);
+         }
+      }
+
+      updateData.stock = totalStock;
 
       const product = await prisma.product.update({
         where: { id: request.params.id },
         data: updateData,
-        include: { colorVariants: true }
+        include: { colorVariants: true, sizeVariants: true }
       });
       return mapId(product);
     } catch (error) {
