@@ -7,7 +7,7 @@ async function productRoutes(fastify, options) {
 
   // GET /api/products  — list with filters, sorting, search
   fastify.get('/', async (request, reply) => {
-    const { category, brand, search, sort, minPrice, maxPrice } = request.query;
+    const { category, brand, search, sort, minPrice, maxPrice, limit } = request.query;
 
     let where = {};
     if (category) {
@@ -43,7 +43,7 @@ async function productRoutes(fastify, options) {
     else if (sort === 'price_desc') orderBy.price = 'desc';
     else orderBy.createdAt = 'desc';
 
-    const products = await prisma.product.findMany({
+    const findOptions = {
       where,
       orderBy,
       include: {
@@ -52,7 +52,13 @@ async function productRoutes(fastify, options) {
         colorVariants: true,
         sizeVariants: true,
       }
-    });
+    };
+
+    if (limit) {
+      findOptions.take = parseInt(limit, 10);
+    }
+
+    const products = await prisma.product.findMany(findOptions);
     return mapId(products);
   });
 
